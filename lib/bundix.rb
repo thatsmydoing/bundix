@@ -42,7 +42,7 @@ class Bundix
 
     # reverse so git comes last
     lock.specs.reverse_each.with_object({}) do |spec, gems|
-      gem = find_cached_spec(spec, cache) || convert_spec(spec, cache, dep_cache)
+      gem = find_cached_spec(spec, cache, dep_cache) || convert_spec(spec, cache, dep_cache)
       gems.merge!(gem)
 
       if spec.dependencies.any?
@@ -98,7 +98,7 @@ class Bundix
     {spec.name => {}}
   end
 
-  def find_cached_spec(spec, cache)
+  def find_cached_spec(spec, cache, dep_cache)
     name, cached = cache.find{|k, v|
       next unless k == spec.name
       next unless cached_source = v['source']
@@ -115,7 +115,13 @@ class Bundix
       end
     }
 
-    {name => cached} if cached
+    if cached
+      updated = cached.slice('source', 'version')
+        .merge(groups(spec, dep_cache))
+        .merge(platforms(spec, dep_cache))
+
+      { name => updated }
+    end
   end
 
   def build_depcache(lock)
